@@ -4,7 +4,7 @@
 
     <item
         android:id="@+id/menu_import"
-        android:title="画像から一括登録"
+        android:title="画像から取り込み"
         app:showAsAction="never" />
     <item
         android:id="@+id/menu_report"

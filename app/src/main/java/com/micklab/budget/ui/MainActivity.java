@@ -20,8 +20,11 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.micklab.budget.R;
+import com.micklab.budget.capture.CaptureActivity;
+import com.micklab.budget.capture.ScreenCaptureService;
 import com.micklab.budget.data.BudgetRepository;
 import com.micklab.budget.data.Record;
+import com.micklab.budget.ocr.OcrInbox;
 import com.micklab.budget.overlay.FloatingButtonService;
 import com.micklab.budget.util.AppExecutors;
 import com.micklab.budget.util.DateUtil;
@@ -59,12 +62,41 @@ public class MainActivity extends AppCompatActivity implements RecordAdapter.Cal
 
         FloatingActionButton fab = findViewById(R.id.fab_add);
         fab.setOnClickListener(v -> addRecord());
+
+        // 追加ボタンの横: 取得対象アプリを個別指定して取り込む（単一アプリ／全画面を選択）
+        FloatingActionButton fabCapture = findViewById(R.id.fab_capture);
+        fabCapture.setOnClickListener(v -> startAppCapture());
+    }
+
+    /** 取得対象アプリを個別指定して1枚取得する（Android 14+ は単一アプリ選択が可能）。 */
+    private void startAppCapture() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestNotif.launch(android.Manifest.permission.POST_NOTIFICATIONS);
+        }
+        Intent i = new Intent(this, CaptureActivity.class);
+        i.putExtra(CaptureActivity.EXTRA_MODE, CaptureActivity.MODE_ONESHOT);
+        startActivity(i);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        handleFloatHandoff();
         reload();
+    }
+
+    /** フロート連続取得から戻った場合: ボタンを無効化し、ためた OCR を後続処理へ渡す。 */
+    private void handleFloatHandoff() {
+        if (FloatingButtonService.isRunning() && OcrInbox.size() > 0) {
+            String text = OcrInbox.drainJoined();
+            stopService(new Intent(this, FloatingButtonService.class));
+            stopService(new Intent(this, ScreenCaptureService.class));
+            Intent i = new Intent(this, ImportPreviewActivity.class);
+            i.putExtra(ImportPreviewActivity.EXTRA_OCR_TEXT, text);
+            startActivity(i);
+        }
     }
 
     private void reload() {

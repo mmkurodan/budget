@@ -27,8 +27,8 @@ public class TesseractOcr {
         }
     }
 
-    /** 画像からテキストを認識する。学習データが無い場合は例外。 */
-    public String recognize(Bitmap bitmap, List<String> langs) throws OcrException {
+    /** 画像からテキストを認識する。学習データが無い場合は例外。dpi は user_defined_dpi。 */
+    public String recognize(Bitmap bitmap, List<String> langs, int dpi) throws OcrException {
         models.ensureAssetsCopied();
         if (langs.isEmpty()) {
             throw new OcrException("OCR 言語が未設定です");
@@ -43,6 +43,8 @@ public class TesseractOcr {
             if (!api.init(models.tessBasePath(), langArg)) {
                 throw new OcrException("Tesseract の初期化に失敗しました: " + langArg);
             }
+            // 読み込み DPI を明示（未指定だと 70dpi 想定になり小さい文字の認識が落ちる）。
+            api.setVariable("user_defined_dpi", String.valueOf(dpi > 0 ? dpi : 400));
             api.setPageSegMode(TessBaseAPI.PageSegMode.PSM_AUTO);
             api.setImage(toArgb8888(bitmap));
             String text = api.getUTF8Text();

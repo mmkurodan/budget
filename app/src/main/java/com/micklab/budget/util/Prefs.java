@@ -16,11 +16,13 @@ public final class Prefs {
     private static final String KEY_MODEL = "llm_model";
     private static final String KEY_API_KEY = "llm_api_key";
     private static final String KEY_OCR_LANGS = "ocr_langs";
+    private static final String KEY_OCR_DPI = "ocr_dpi";
 
     public static final String DEFAULT_BASE_URL = "http://127.0.0.1:11434";
     public static final String DEFAULT_API_TYPE = "ollama";
     public static final String DEFAULT_MODEL = "default";
     public static final String DEFAULT_OCR_LANGS = "jpn+eng";
+    public static final int DEFAULT_OCR_DPI = 400;
 
     private final SharedPreferences sp;
 
@@ -71,5 +73,14 @@ public final class Prefs {
 
     public void setOcrLangs(String v) {
         sp.edit().putString(KEY_OCR_LANGS, v).apply();
+    }
+
+    /** OCR 読み込み時の DPI（Tesseract の user_defined_dpi）。既定 400。 */
+    public int ocrDpi() {
+        return sp.getInt(KEY_OCR_DPI, DEFAULT_OCR_DPI);
+    }
+
+    public void setOcrDpi(int v) {
+        sp.edit().putInt(KEY_OCR_DPI, v > 0 ? v : DEFAULT_OCR_DPI).apply();
     }
 }

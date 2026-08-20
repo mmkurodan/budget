@@ -35,6 +35,8 @@ public class ImportPreviewActivity extends AppCompatActivity implements RecordAd
 
     public static final String EXTRA_IMAGE_URI = "image_uri";
     public static final String EXTRA_IMAGE_PATH = "image_path";
+    /** 連続取得でためた OCR テキストを直接渡すモード（画像を再 OCR しない）。 */
+    public static final String EXTRA_OCR_TEXT = "ocr_text";
 
     private BudgetRepository repo;
     private RecordAdapter adapter;
@@ -72,15 +74,22 @@ public class ImportPreviewActivity extends AppCompatActivity implements RecordAd
 
     private void runImport() {
         progress.setVisibility(View.VISIBLE);
-        status.setText("画像を読み込み、OCR と LLM で解析しています…");
+        String ocrTextExtra = getIntent().getStringExtra(EXTRA_OCR_TEXT);
+        boolean textMode = ocrTextExtra != null;
+        status.setText(textMode ? "OCR 結果を解析しています…" : "画像を OCR し、解析しています…");
         AppExecutors.io(() -> {
             try {
-                Bitmap bitmap = loadBitmap();
-                if (bitmap == null) {
-                    throw new IllegalStateException("画像を読み込めませんでした");
-                }
                 ImportManager manager = new ImportManager(this);
-                ImportManager.Result result = manager.importFromBitmap(bitmap);
+                ImportManager.Result result;
+                if (textMode) {
+                    result = new ImportManager.Result(ocrTextExtra, manager.parse(ocrTextExtra));
+                } else {
+                    Bitmap bitmap = loadBitmap();
+                    if (bitmap == null) {
+                        throw new IllegalStateException("画像を読み込めませんでした");
+                    }
+                    result = manager.importFromBitmap(bitmap);
+                }
                 List<String> cats = repo.getCategoryNames();
 
                 // stable id 衝突を避けるため一時的な負の id を割り当てる

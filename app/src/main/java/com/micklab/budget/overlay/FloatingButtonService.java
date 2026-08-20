@@ -9,7 +9,9 @@ import android.content.pm.ServiceInfo;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -20,16 +22,18 @@ import android.widget.ImageView;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
+import androidx.core.content.ContextCompat;
 
 import com.micklab.budget.R;
 import com.micklab.budget.capture.CaptureActivity;
+import com.micklab.budget.capture.ScreenCaptureService;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * 他アプリ上に重ねるフロートボタンを保持する常駐サービス。
- * ボタンをタップすると {@link CaptureActivity} を起動し、画面キャプチャ→OCR→LLM 登録へ進む。
- * ドラッグで移動できる。
+ * 他アプリ上に重ねるフロートボタン。タップで現在の全画面を取得する。
+ * 初回はキャプチャ同意（{@link CaptureActivity}）を挟み、以降は既存セッションで連続取得する。
+ * ドラッグで移動できる。アプリに戻ると呼び出し側（MainActivity）が停止する。
  */
 public class FloatingButtonService extends Service {
 
@@ -37,25 +41,39 @@ public class FloatingButtonService extends Service {
     private static final int NOTIF_ID = 1001;
 
     private static final AtomicBoolean RUNNING = new AtomicBoolean(false);
+    private static volatile FloatingButtonService instance;
 
     private WindowManager windowManager;
     private View buttonView;
     private WindowManager.LayoutParams params;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public static boolean isRunning() {
         return RUNNING.get();
     }
 
+    /** キャプチャの瞬間だけボタンを隠す（スクリーンショットに写り込ませない）。 */
+    public static void setOverlayVisible(boolean visible) {
+        FloatingButtonService s = instance;
+        if (s == null) return;
+        s.mainHandler.post(() -> {
+            if (s.buttonView != null) {
+                s.buttonView.setVisibility(visible ? View.VISIBLE : View.GONE);
+            }
+        });
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
+        instance = this;
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (RUNNING.getAndSet(true)) {
-            return START_STICKY; // 既に表示済み
+            return START_STICKY;
         }
         startForegroundNotification();
         addOverlayButton();
@@ -71,7 +89,7 @@ public class FloatingButtonService extends Service {
         }
         Notification n = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("家計簿 フロートボタン")
-                .setContentText("タップで画面を取り込み、明細を一括登録します")
+                .setContentText("タップで全画面を取得（連続可）。アプリに戻ると登録候補にします")
                 .setSmallIcon(android.R.drawable.ic_menu_camera)
                 .setOngoing(true)
                 .build();
@@ -110,10 +128,18 @@ public class FloatingButtonService extends Service {
         buttonView = button;
     }
 
+    /** 初回は同意を挟み、以降は既存セッションへ取得指示を送る。 */
     private void onButtonTapped() {
-        Intent i = new Intent(this, CaptureActivity.class);
-        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        startActivity(i);
+        if (ScreenCaptureService.isProjecting()) {
+            Intent i = new Intent(this, ScreenCaptureService.class);
+            i.setAction(ScreenCaptureService.ACTION_CAPTURE);
+            ContextCompat.startForegroundService(this, i);
+        } else {
+            Intent i = new Intent(this, CaptureActivity.class);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            i.putExtra(CaptureActivity.EXTRA_MODE, CaptureActivity.MODE_CONTINUOUS);
+            startActivity(i);
+        }
     }
 
     /** 移動と（移動でない場合の）クリックを区別する。 */
@@ -170,6 +196,7 @@ public class FloatingButtonService extends Service {
             }
             buttonView = null;
         }
+        if (instance == this) instance = null;
         RUNNING.set(false);
     }
 

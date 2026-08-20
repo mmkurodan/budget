@@ -29,6 +29,14 @@
             android:padding="16dp">
 
             <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="※ LLM 連携は現在保留中。OCR の後続処理はルールベースで動作します。"
+                android:textColor="#888888"
+                android:textSize="12sp" />
+
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="LLM サーバ URL（既定: ローカル llama）"
@@ -110,6 +118,21 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="jpn+eng"
+                android:maxLines="1" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="OCR 読み込み DPI（既定 400）"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/set_ocr_dpi"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="400"
+                android:inputType="number"
                 android:maxLines="1" />
 
             <Button

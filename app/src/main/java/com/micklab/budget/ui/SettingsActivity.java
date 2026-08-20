@@ -29,6 +29,7 @@ public class SettingsActivity extends AppCompatActivity {
     private EditText model;
     private EditText apiKey;
     private EditText ocrLangs;
+    private EditText ocrDpi;
     private RadioGroup apiType;
 
     @Override
@@ -44,12 +45,14 @@ public class SettingsActivity extends AppCompatActivity {
         model = findViewById(R.id.set_model);
         apiKey = findViewById(R.id.set_api_key);
         ocrLangs = findViewById(R.id.set_ocr_langs);
+        ocrDpi = findViewById(R.id.set_ocr_dpi);
         apiType = findViewById(R.id.set_api_type);
 
         baseUrl.setText(prefs.baseUrl());
         model.setText(prefs.model());
         apiKey.setText(prefs.apiKey());
         ocrLangs.setText(prefs.ocrLangs());
+        ocrDpi.setText(String.valueOf(prefs.ocrDpi()));
         apiType.check(prefs.isOpenAi() ? R.id.type_openai : R.id.type_ollama);
 
         ((Button) findViewById(R.id.btn_ping)).setOnClickListener(v -> ping());
@@ -69,6 +72,11 @@ public class SettingsActivity extends AppCompatActivity {
         prefs.setModel(model.getText().toString().trim());
         prefs.setApiKey(apiKey.getText().toString().trim());
         prefs.setOcrLangs(ocrLangs.getText().toString().trim());
+        try {
+            prefs.setOcrDpi(Integer.parseInt(ocrDpi.getText().toString().trim()));
+        } catch (NumberFormatException e) {
+            prefs.setOcrDpi(Prefs.DEFAULT_OCR_DPI);
+        }
         prefs.setApiType(apiType.getCheckedRadioButtonId() == R.id.type_openai ? "openai" : "ollama");
     }
 

@@ -1,61 +1,64 @@
-# budget — SQLite 家計簿（OCR + LLM 一括登録つき）
+# budget — SQLite 家計簿（OCR 一括登録つき）
 
 SQLite を利用した Android 家計簿アプリ。**日付・カテゴリ・費目・金額**のレコードを
-テーブル上で直接編集し、期間指定のカテゴリ別レポートを出せる。加えて、他アプリ上に
-出せる**フロートボタン**から画面を取り込み、**OCR（Tesseract）→ LLM（GBNF 拘束）**で
-銀行口座やクレジットカードの明細をレコード化して一括登録する。
+テーブル上で直接編集し、期間指定のカテゴリ別レポートを出せる。加えて、画像や、他アプリ上に
+出せる**フロートボタン**の連続取得から画面を **OCR（Tesseract）** で読み取り、
+後続処理でレコード化して一括登録する。
 
 ## 主な機能と要件対応
 
 | 要件 | 実装 |
 | --- | --- |
-| 日付/カテゴリ/費目/金額のテーブル、直接 追加/編集/削除 | `MainActivity` + `RecordAdapter`（行内で 日付ピッカー・カテゴリ選択・費目・金額を編集、FAB で追加、✕ で削除） |
-| レポート（期間指定・カテゴリ別収支＋合計） | `ReportActivity`（from/to 指定、カテゴリ別収支バー、収入/支出/収支の合計） |
-| 任意のカテゴリ定義・ブランク許可・変更可 | `CategoriesActivity`（追加/改名/削除）。初期値 **固定費・変動費・収入・食品**。レコードのカテゴリは空欄可・変更可 |
-| OCR API + LLM API による一括登録 | `ImportManager`（画像→OCR→LLM→候補）＋ `ImportPreviewActivity`（確認・編集して登録） |
-| フロートボタンを他アプリにオーバーレイ | `FloatingButtonService`（`TYPE_APPLICATION_OVERLAY`, ドラッグ移動可） |
-| ボタン押下で画面スクショ取り込み | `CaptureActivity`（MediaProjection 同意）＋ `ScreenCaptureService`（1 フレーム取得） |
-| Tesseract で画面上の履歴を OCR | `TesseractOcr` + `OcrModelManager`（`jpn+eng`、端末内 DL / assets 同梱対応） |
-| LLM に SQLite レコード形式へ整形指示 | `ImportManager#buildPrompt`（支出=負・収入=正、カテゴリは既知集合＋空文字） |
-| **GBNF で形式を徹底** | `BudgetGrammar`（レコード配列の JSON を厳密拘束。カテゴリは既知集合＋空文字のみ許可） |
-| JSON に基づき SQLite へ登録 | `ImportManager#parseRecords` → `BudgetRepository#insertRecord` |
+| 日付/カテゴリ/費目/金額のレコード、直接 追加/編集/削除 | `MainActivity` + `RecordAdapter`。1レコードを **3行（日付＋カテゴリ / 費目 / 金額）** のカードで表示し編集しやすくした。FAB で追加、✕で削除 |
+| レポート（期間指定・カテゴリ別収支＋合計） | `ReportActivity` |
+| 任意のカテゴリ定義・ブランク許可・変更可・初期値4件 | `CategoriesActivity`。初期値 **固定費・変動費・収入・食品** |
+| 取得対象アプリを個別指定して取り込み | 追加ボタン横のボタン → **単一アプリ／全画面を選択**（Android 14+ の `createConfigForUserChoice`）→ 1枚取得 → OCR → 後続処理 → プレビュー登録 |
+| 画像から取り込み（保存済み） | メニュー「画像から取り込み」→ 画像選択 → OCR → 後続処理 |
+| フロートボタンを他アプリにオーバーレイ | `FloatingButtonService`（ドラッグ移動可）。メニューの「フロートボタン ON/OFF」で表示 |
+| フロートは**全画面固定**で取得・**連続取得** | `createConfigForDefaultDisplay` で全画面固定。タップごとに1枚 **OCR まで**実行して蓄積（`ScreenCaptureService` はセッションを維持し都度の同意を回避） |
+| アプリに戻ると無効化し、ためた OCR を後続処理へ | `MainActivity#onResume` が `OcrInbox` を回収 → プレビューへ |
+| OCR 読み込み DPI 指定（既定 400） | 設定の「OCR 読み込み DPI」→ Tesseract `user_defined_dpi` |
+| OCR 結果を要素別に整えてレコード化（LLM 保留） | `OcrRecordParser` |
+
+### 後続処理（`OcrRecordParser`）のルール
+- OCR 結果を空白区切りの**要素ごと**に、**日付・費目・金額を登場順**に認識。
+- **金額で 7 桁を越える数字はスキップ**（口座番号や残高の誤検出除け）。
+- **最初の日付が登場する以前の値は無視**。日付は次の日付が出るまで引き継ぐ。
+- 金額の符号: `-` `△` `▲` や括弧は負、それ以外は表記どおり正。カテゴリは付与しない（空）。
+
+> **LLM 連携は一旦保留。** 現在の後続処理はルールベース。将来の再有効化に備えて
+> `llm/LlmClient` と `llm/BudgetGrammar`（GBNF 生成）は残しているが、パイプラインからは未使用。
 
 金額は 1 列で収支を表せるよう**符号付き**（支出=負, 収入=正）で保持する。
 
-## 動作に必要な準備
+## 使い方（一括登録）
+- **対象アプリを指定して（単発）**: 追加ボタンの横のボタン → 全画面か**単一アプリ**を選択（Android 14+）
+  → 1枚取得 → 候補を確認・編集 →「登録」。
+- **フロートボタンから（全画面・連続）**: メニュー →「フロートボタン ON/OFF」で表示 → 銀行/カードアプリを
+  開いてボタンをタップ（**画面が変わるたびに連続タップ**して蓄積） → アプリに戻ると自動でプレビュー →「登録」。
+- **画像から（保存済み）**: メニュー →「画像から取り込み」でスクショ/画像を選択。
 
-1. **LLM サーバ**: 既定は端末内の llama サーバ（`/root/llama` アプリ, `http://127.0.0.1:11434`,
-   Ollama 互換）。設定画面で URL / API 種別（Ollama・OpenAI 互換）/ モデル名 / API キーを変更でき、
-   「接続確認」「モデル一覧」で確認できる。GBNF は `/api/chat` の `grammar` フィールドで渡す。
-2. **OCR モデル**: 設定画面の「OCR モデルをダウンロード」で `jpn` / `eng` を取得（`tessdata_fast`,
+## 動作に必要な準備
+1. **OCR モデル**: 設定の「OCR モデルをダウンロード」で `jpn` / `eng` を取得（`tessdata_fast`,
    初回のみ通信）。`app/src/main/assets/tessdata/*.traineddata` に同梱しても良い。
-3. **権限**: フロートボタンは「他アプリの上に表示」（`SYSTEM_ALERT_WINDOW`）と画面キャプチャの
+2. **権限**: フロートボタンは「他アプリの上に表示」（`SYSTEM_ALERT_WINDOW`）と画面キャプチャの
    同意（`MediaProjection`）が必要。Android 13+ では通知権限も要求する。
 
-## 使い方（一括登録）
-
-- **画像から**: メニュー →「画像から一括登録」→ 画像を選択 → 候補を確認・編集 →「登録」。
-- **フロートボタンから**: メニュー →「フロートボタン ON/OFF」で表示 → 銀行/カードアプリを開いて
-  ボタンをタップ → 画面キャプチャ → 候補プレビュー → 登録。
-
 ## アーキテクチャ
-
 ```
-ui/         MainActivity(表, 直接編集) / Report / Categories / Settings / ImportPreview + Adapters
+ui/         MainActivity(3行カードの表) / Report / Categories / Settings / ImportPreview + Adapters
 data/       BudgetDbHelper(SQLite) / BudgetRepository(CRUD・集計) / Record / CategorySum
-ocr/        OcrModelManager(tessdata 管理) / TesseractOcr
-llm/        LlmClient(Ollama・OpenAI 互換 HTTP) / BudgetGrammar(GBNF) / ImportManager(パイプライン)
-overlay/    FloatingButtonService(オーバーレイ常駐)
-capture/    CaptureActivity(同意) / ScreenCaptureService(1 フレーム取得)
+ocr/        OcrModelManager(tessdata 管理) / TesseractOcr(DPI 指定) / OcrRecordParser / OcrInbox
+llm/        ImportManager(OCR→後続処理) ／ LlmClient・BudgetGrammar(保留・未使用)
+overlay/    FloatingButtonService(オーバーレイ常駐, 連続取得トリガ)
+capture/    CaptureActivity(同意・取得範囲切替) / ScreenCaptureService(全画面連続 or 単一アプリ単発＋OCR)
 util/       AppExecutors / Prefs / DateUtil
 ```
 
-- 言語: **Java**（スキャフォールドに合わせる）。UI は Material3 + RecyclerView。
-- DB は `SQLiteOpenHelper` を直接利用（追加依存なし）。
-- LLM/OCR 通信は `HttpURLConnection` + `org.json`（追加依存なし）。OCR は `tesseract4android`。
+- 言語: **Java**。UI は Material3 + RecyclerView。DB は `SQLiteOpenHelper` を直接利用。
+- OCR は `tesseract4android`。通信系（保留中の LLM）は `HttpURLConnection` + `org.json`。追加依存は最小。
 
 ## ビルド
-
 CI（`.github/workflows/android.yml`）と同じく **Gradle 8.11.1 / AGP 8.9.1 / JDK 17**、
 compileSdk 36 / minSdk 24 / targetSdk 36。
 
@@ -69,7 +72,9 @@ compileSdk 36 / minSdk 24 / targetSdk 36。
 > `dependencyResolutionManagement.repositories` に該当グループ限定で `https://jitpack.io` を追加。
 
 ## 既知の制限
-
-- 画面キャプチャは Android のセッションごとに毎回同意ダイアログが出る（OS 仕様）。
-- フロートボタン自体もスクリーンショットに写り得る（小さいため OCR には実害小）。
-- OCR は横書き明細を想定。LLM 出力は GBNF で形式を保証するが、値の正しさは明細内容に依存する。
+- 画面キャプチャは MediaProjection のセッション開始時に**1回だけ**同意ダイアログが出る（連続取得中は再表示なし）。
+- 「対象アプリを個別指定」は Android 14+ の単一アプリ取得（`createConfigForUserChoice`）を利用。
+  単一アプリの描画は端末により全画面へスケール／余白が入ることがある。14 未満は全画面のみ。
+- 取得の瞬間はフロートボタンを一時的に隠して写り込みを避ける。
+- 後続処理はルールベースのため、明細レイアウトによっては費目/符号の推定を手動修正することがある
+  （3行カードで編集しやすくしている）。残高列がある明細では収支の符号を確認のこと。
