@@ -1,0 +1,184 @@
+package com.micklab.budget.ui;
+
+import android.app.DatePickerDialog;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.provider.Settings;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.widget.Toast;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.snackbar.Snackbar;
+import com.micklab.budget.R;
+import com.micklab.budget.data.BudgetRepository;
+import com.micklab.budget.data.Record;
+import com.micklab.budget.overlay.FloatingButtonService;
+import com.micklab.budget.util.AppExecutors;
+import com.micklab.budget.util.DateUtil;
+
+import java.util.Calendar;
+
+/** 家計簿のメイン画面。レコード表を直接編集し、各機能へ遷移する。 */
+public class MainActivity extends AppCompatActivity implements RecordAdapter.Callbacks {
+
+    private BudgetRepository repo;
+    private RecordAdapter adapter;
+    private RecyclerView recycler;
+
+    private final ActivityResultLauncher<String> pickImage =
+            registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
+                if (uri != null) openImportPreview(uri);
+            });
+
+    private final ActivityResultLauncher<String> requestNotif =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
+            });
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        setSupportActionBar(findViewById(R.id.toolbar));
+
+        repo = new BudgetRepository(this);
+        adapter = new RecordAdapter(this);
+
+        recycler = findViewById(R.id.recycler);
+        recycler.setLayoutManager(new LinearLayoutManager(this));
+        recycler.setAdapter(adapter);
+
+        FloatingActionButton fab = findViewById(R.id.fab_add);
+        fab.setOnClickListener(v -> addRecord());
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        reload();
+    }
+
+    private void reload() {
+        AppExecutors.io(() -> {
+            java.util.List<Record> records = repo.getAllRecords();
+            java.util.List<String> cats = repo.getCategoryNames();
+            AppExecutors.main(() -> {
+                adapter.setCategories(cats);
+                adapter.setItems(records);
+            });
+        });
+    }
+
+    private void addRecord() {
+        Record r = new Record();
+        r.date = DateUtil.today();
+        r.category = "";
+        r.item = "";
+        r.amount = 0;
+        AppExecutors.io(() -> {
+            repo.insertRecord(r); // r.id 採番
+            AppExecutors.main(() -> {
+                adapter.addAtTop(r);
+                recycler.scrollToPosition(0);
+            });
+        });
+    }
+
+    // ---- RecordAdapter.Callbacks -----------------------------------------
+
+    @Override
+    public void onRecordChanged(Record r) {
+        AppExecutors.io(() -> repo.updateRecord(r));
+    }
+
+    @Override
+    public void onRecordDeleted(Record r, int position) {
+        adapter.removeAt(position);
+        AppExecutors.io(() -> repo.deleteRecord(r.id));
+        Snackbar.make(recycler, "1件削除しました", Snackbar.LENGTH_LONG)
+                .setAction("元に戻す", v -> AppExecutors.io(() -> {
+                    r.id = 0;
+                    repo.insertRecord(r);
+                    AppExecutors.main(this::reload);
+                }))
+                .show();
+    }
+
+    @Override
+    public void onPickDate(Record r, int position) {
+        Calendar c = DateUtil.parse(r.date);
+        DatePickerDialog dialog = new DatePickerDialog(this, (view, year, month, day) -> {
+            r.date = DateUtil.iso(year, month, day);
+            AppExecutors.io(() -> repo.updateRecord(r));
+            adapter.notifyItemChanged(position);
+        }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH));
+        dialog.show();
+    }
+
+    // ---- menu -------------------------------------------------------------
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        int id = item.getItemId();
+        if (id == R.id.menu_import) {
+            pickImage.launch("image/*");
+            return true;
+        } else if (id == R.id.menu_report) {
+            startActivity(new Intent(this, ReportActivity.class));
+            return true;
+        } else if (id == R.id.menu_categories) {
+            startActivity(new Intent(this, CategoriesActivity.class));
+            return true;
+        } else if (id == R.id.menu_float) {
+            toggleFloatingButton();
+            return true;
+        } else if (id == R.id.menu_settings) {
+            startActivity(new Intent(this, SettingsActivity.class));
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void openImportPreview(Uri uri) {
+        Intent i = new Intent(this, ImportPreviewActivity.class);
+        i.putExtra(ImportPreviewActivity.EXTRA_IMAGE_URI, uri.toString());
+        startActivity(i);
+    }
+
+    private void toggleFloatingButton() {
+        if (FloatingButtonService.isRunning()) {
+            stopService(new Intent(this, FloatingButtonService.class));
+            Toast.makeText(this, "フロートボタンを停止しました", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (!Settings.canDrawOverlays(this)) {
+            Toast.makeText(this, "他アプリ上に表示する権限を許可してください", Toast.LENGTH_LONG).show();
+            startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + getPackageName())));
+            return;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestNotif.launch(android.Manifest.permission.POST_NOTIFICATIONS);
+        }
+        androidx.core.content.ContextCompat.startForegroundService(
+                this, new Intent(this, FloatingButtonService.class));
+        Toast.makeText(this, "フロートボタンを表示しました", Toast.LENGTH_SHORT).show();
+    }
+}

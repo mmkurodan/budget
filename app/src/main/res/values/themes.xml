@@ -1,7 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.budget" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
+    <style name="Theme.budget" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:statusBarColor">?attr/colorPrimary</item>
+    </style>
+
+    <!-- MediaProjection 同意ダイアログのホストになる透明 Activity 用 -->
+    <style name="Theme.Budget.Transparent" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowNoDisplay">false</item>
+        <item name="android:backgroundDimEnabled">false</item>
     </style>
 </resources>

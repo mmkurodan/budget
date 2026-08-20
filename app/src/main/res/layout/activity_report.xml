@@ -13,7 +13,8 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:title="家計簿" />
+            app:navigationIcon="?attr/homeAsUpIndicator"
+            app:title="レポート" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <LinearLayout
@@ -22,53 +23,51 @@
         android:orientation="vertical"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <!-- 列見出し -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:baselineAligned="false"
-            android:background="?attr/colorSurfaceVariant"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:paddingTop="6dp"
-            android:paddingBottom="6dp">
+            android:gravity="center_vertical"
+            android:padding="8dp">
 
             <TextView
-                android:layout_width="88dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="日付"
-                android:textStyle="bold"
-                android:textSize="12sp" />
+                android:text="期間"
+                android:layout_marginEnd="8dp" />
 
-            <TextView
+            <Button
+                android:id="@+id/btn_from"
+                style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1.1"
-                android:text="カテゴリ"
-                android:textStyle="bold"
-                android:textSize="12sp" />
+                android:layout_weight="1"
+                android:text="from" />
 
             <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="〜"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp" />
+
+            <Button
+                android:id="@+id/btn_to"
+                style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1.4"
-                android:text="費目"
-                android:textStyle="bold"
-                android:textSize="12sp" />
-
-            <TextView
-                android:layout_width="88dp"
-                android:layout_height="wrap_content"
-                android:text="金額"
-                android:gravity="end"
-                android:textStyle="bold"
-                android:textSize="12sp" />
-
-            <Space
-                android:layout_width="40dp"
-                android:layout_height="wrap_content" />
+                android:layout_weight="1"
+                android:text="to" />
         </LinearLayout>
+
+        <TextView
+            android:id="@+id/totals"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?attr/colorSurfaceVariant"
+            android:padding="12dp"
+            android:textStyle="bold"
+            android:textSize="15sp" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recycler"
@@ -76,17 +75,8 @@
             android:layout_height="0dp"
             android:layout_weight="1"
             android:clipToPadding="false"
-            android:paddingBottom="88dp"
+            android:paddingBottom="16dp"
             android:scrollbars="vertical" />
     </LinearLayout>
-
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab_add"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_margin="16dp"
-        android:contentDescription="レコード追加"
-        android:src="@android:drawable/ic_input_add" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

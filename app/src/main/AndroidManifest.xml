@@ -1,19 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- LLM/OCR モデルとローカル llama サーバへの通信 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 他アプリ上に重ねるフロートボタン -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- フォアグラウンドサービス（オーバーレイ常駐 / 画面キャプチャ） -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Android 13+ の通知表示 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
-        android:label="budget"
+        android:allowBackup="true"
+        android:label="家計簿"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
         android:theme="@style/Theme.budget">
 
         <activity
-            android:name=".MainActivity"
+            android:name=".ui.MainActivity"
             android:exported="true">
-
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
         </activity>
+
+        <activity android:name=".ui.CategoriesActivity" android:exported="false" />
+        <activity android:name=".ui.ReportActivity" android:exported="false" />
+        <activity android:name=".ui.SettingsActivity" android:exported="false" />
+        <activity android:name=".ui.ImportPreviewActivity" android:exported="false" />
+
+        <!-- MediaProjection 同意ダイアログ専用の透明 Activity -->
+        <activity
+            android:name=".capture.CaptureActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Budget.Transparent"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:launchMode="singleTop" />
+
+        <!-- 他アプリ上のフロートボタンを保持する常駐サービス -->
+        <service
+            android:name=".overlay.FloatingButtonService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="floating_capture_button" />
+        </service>
+
+        <!-- 画面スクリーンショットを1枚取得するサービス -->
+        <service
+            android:name=".capture.ScreenCaptureService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
 
     </application>
 

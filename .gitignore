@@ -1,0 +1,22 @@
+# Gradle / build outputs
+.gradle/
+build/
+app/build/
+/captures
+.externalNativeBuild/
+.cxx/
+
+# Local machine config
+/local.properties
+
+# Signing (CI restores app/keystore.jks from a secret; never commit it)
+*.jks
+*.keystore
+
+# IDE / OS
+*.iml
+.idea/
+.DS_Store
+
+# Local test artifacts from test-before-aapt2.sh
+/test_logs_*

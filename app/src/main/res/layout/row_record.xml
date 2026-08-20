@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:baselineAligned="false"
+    android:gravity="center_vertical"
+    android:minHeight="56dp"
+    android:paddingStart="8dp"
+    android:paddingEnd="8dp"
+    android:paddingTop="2dp"
+    android:paddingBottom="2dp">
+
+    <TextView
+        android:id="@+id/row_date"
+        android:layout_width="88dp"
+        android:layout_height="wrap_content"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_vertical"
+        android:minHeight="44dp"
+        android:paddingEnd="4dp"
+        android:text="2026-01-01"
+        android:textSize="12sp" />
+
+    <Spinner
+        android:id="@+id/row_category"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.1" />
+
+    <EditText
+        android:id="@+id/row_item"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.4"
+        android:hint="費目"
+        android:imeOptions="actionDone"
+        android:inputType="text"
+        android:maxLines="1"
+        android:textSize="13sp" />
+
+    <EditText
+        android:id="@+id/row_amount"
+        android:layout_width="88dp"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:hint="0"
+        android:imeOptions="actionDone"
+        android:inputType="numberSigned"
+        android:maxLines="1"
+        android:textSize="13sp" />
+
+    <ImageButton
+        android:id="@+id/row_delete"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="削除"
+        android:src="@android:drawable/ic_menu_delete" />
+
+</LinearLayout>

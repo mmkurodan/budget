@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:navigationIcon="?attr/homeAsUpIndicator"
+            app:title="設定" />
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="LLM サーバ URL（既定: ローカル llama）"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/set_base_url"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="http://127.0.0.1:11434"
+                android:inputType="textUri"
+                android:maxLines="1" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="API 種別"
+                android:textStyle="bold" />
+
+            <RadioGroup
+                android:id="@+id/set_api_type"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/type_ollama"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Ollama" />
+
+                <RadioButton
+                    android:id="@+id/type_openai"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:text="OpenAI 互換" />
+            </RadioGroup>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="モデル名"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/set_model"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="default"
+                android:maxLines="1" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="API キー（任意）"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/set_api_key"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="（不要なら空欄）"
+                android:inputType="textPassword"
+                android:maxLines="1" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="OCR 言語（tesseract）"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/set_ocr_langs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="jpn+eng"
+                android:maxLines="1" />
+
+            <Button
+                android:id="@+id/btn_ping"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="接続確認" />
+
+            <Button
+                android:id="@+id/btn_models"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="モデル一覧を取得して選択" />
+
+            <Button
+                android:id="@+id/btn_ocr_dl"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="OCR モデルをダウンロード" />
+
+            <Button
+                android:id="@+id/btn_overlay_perm"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="オーバーレイ権限を確認 / 許可" />
+
+        </LinearLayout>
+    </ScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
