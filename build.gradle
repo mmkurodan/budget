@@ -1,0 +1,12 @@
+plugins {
+    id 'com.android.application' version '8.9.1' apply false
+}
+
+// Kotlin 1.7+ merged jdk7/jdk8 into stdlib. Exclude the old split artifacts
+// that older appcompat transitive deps still pull in, to avoid duplicate classes.
+subprojects {
+    configurations.all {
+        exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
+        exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
+    }
+}
