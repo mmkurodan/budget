@@ -25,9 +25,15 @@ public final class OcrRecordParser {
     private OcrRecordParser() {
     }
 
-    private static final Pattern DATE_FULL = Pattern.compile("^(\\d{4})[-/.](\\d{1,2})[-/.](\\d{1,2})$");
-    private static final Pattern DATE_JP_FULL = Pattern.compile("^(\\d{4})年(\\d{1,2})月(\\d{1,2})日?$");
-    private static final Pattern DATE_MD = Pattern.compile("^(\\d{1,2})[/-](\\d{1,2})$");
+    // 日付のバリエーション（区切りは - / . いずれも可）:
+    //  4桁年:  2026-08-01 / 2026/8/1 / 2026.08.01
+    //  2桁年:  26-08-01 / 26/8/1 / 26.08.01
+    //  年なし: 08-01 / 8/1 / 08.01
+    //  和暦式: 2026年8月1日 / 26年8月1日 / 8月1日
+    private static final Pattern DATE_Y4 = Pattern.compile("^(\\d{4})[-/.](\\d{1,2})[-/.](\\d{1,2})$");
+    private static final Pattern DATE_Y2 = Pattern.compile("^(\\d{2})[-/.](\\d{1,2})[-/.](\\d{1,2})$");
+    private static final Pattern DATE_JP_Y = Pattern.compile("^(\\d{2,4})年(\\d{1,2})月(\\d{1,2})日?$");
+    private static final Pattern DATE_MD = Pattern.compile("^(\\d{1,2})[-/.](\\d{1,2})$");
     private static final Pattern DATE_JP_MD = Pattern.compile("^(\\d{1,2})月(\\d{1,2})日?$");
     private static final Pattern DIGITS = Pattern.compile("\\d+");
 
@@ -75,15 +81,25 @@ public final class OcrRecordParser {
     // ---- date -------------------------------------------------------------
 
     private static String matchDate(String s, int fallbackYear) {
-        Matcher m = DATE_FULL.matcher(s);
-        if (m.matches()) return iso(n(m, 1), n(m, 2), n(m, 3));
-        m = DATE_JP_FULL.matcher(s);
-        if (m.matches()) return iso(n(m, 1), n(m, 2), n(m, 3));
+        Matcher m = DATE_Y4.matcher(s);
+        if (m.matches()) return iso(fullYear(n(m, 1), fallbackYear), n(m, 2), n(m, 3));
+        m = DATE_Y2.matcher(s);
+        if (m.matches()) return iso(fullYear(n(m, 1), fallbackYear), n(m, 2), n(m, 3));
+        m = DATE_JP_Y.matcher(s);
+        if (m.matches()) return iso(fullYear(n(m, 1), fallbackYear), n(m, 2), n(m, 3));
         m = DATE_MD.matcher(s);
         if (m.matches()) return iso(fallbackYear, n(m, 1), n(m, 2));
         m = DATE_JP_MD.matcher(s);
         if (m.matches()) return iso(fallbackYear, n(m, 1), n(m, 2));
         return null;
+    }
+
+    /** 2桁年を4桁に補完（未来すぎる場合は1900年代とみなす）。4桁はそのまま。 */
+    private static int fullYear(int y, int fallbackYear) {
+        if (y >= 100) return y;
+        int full = 2000 + y;
+        if (full > fallbackYear + 1) full -= 100;
+        return full;
     }
 
     private static String iso(int y, int mo, int d) {
@@ -142,6 +158,10 @@ public final class OcrRecordParser {
                 b.append((char) ('0' + (c - '０')));
             } else if (c == '，') {
                 b.append(',');
+            } else if (c == '．') {
+                b.append('.');
+            } else if (c == '／') {
+                b.append('/');
             } else if (c == '＋') {
                 b.append('+');
             } else if (c == '－') {
