@@ -42,28 +42,45 @@ public final class OcrRecordParser {
         if (text == null) return out;
         int year = Calendar.getInstance().get(Calendar.YEAR);
 
-        String currentDate = null;
+        String currentDate = null;   // 直近の日付（以降へ引き継ぐ）
+        String firstDate = null;     // 最初に現れた日付（日付前レコードの補完に使う）
         StringBuilder item = new StringBuilder();
+        boolean skipNextNumber = false;
 
         for (String raw : text.split("\\s+")) {
             String tok = raw.trim();
             if (tok.isEmpty()) continue;
             String half = toHalfWidth(tok);
 
-            String date = matchDate(half, year);
-            if (date != null) {
-                currentDate = date;       // 以降のレコードへ引き継ぐ
-                item.setLength(0);
+            // 「残高」を含む要素は無視。数字が付いていなければ直後に来る数字も無視する。
+            if (tok.contains("残高")) {
+                skipNextNumber = !hasDigit(half);
                 continue;
             }
-            if (currentDate == null) continue; // 最初の日付より前は無視
+            if (skipNextNumber) {
+                skipNextNumber = false;
+                if (parseAmount(half) != null) continue; // 残高の値を無視
+                // 数字でなければ通常処理へフォールスルー
+            }
+
+            String date = matchDate(half, year);
+            if (date != null) {
+                currentDate = date;
+                if (firstDate == null) {
+                    firstDate = date;
+                    for (Record r : out) {          // 日付前に積んだレコードを最初の日付で補完
+                        if (r.date == null) r.date = date;
+                    }
+                }
+                continue;
+            }
 
             Amount amt = parseAmount(half);
             if (amt != null) {
                 if (amt.digits.length() > 7) continue; // 7 桁超はスキップ
                 long v = Long.parseLong(amt.digits);
                 Record r = new Record();
-                r.date = currentDate;
+                r.date = currentDate;                // 日付未確定なら null（後で補完）
                 r.category = "";
                 r.item = item.toString().trim();
                 r.amount = amt.negative ? -v : v;
@@ -75,7 +92,31 @@ public final class OcrRecordParser {
             if (item.length() > 0) item.append(' ');
             item.append(tok); // 費目は元の表記のまま
         }
+
+        // 日付が最後まで現れなかったレコード（全体に日付が無い）は除外する。
+        List<Record> result = new ArrayList<>();
+        for (Record r : out) {
+            if (r.date != null) result.add(r);
+        }
+        return result;
+    }
+
+    /** OCR テキストを要素（空白区切り）に分割する。プレビューの縦並び表示にも使う。 */
+    public static List<String> elements(String text) {
+        List<String> out = new ArrayList<>();
+        if (text == null) return out;
+        for (String raw : text.split("\\s+")) {
+            String t = raw.trim();
+            if (!t.isEmpty()) out.add(t);
+        }
         return out;
+    }
+
+    private static boolean hasDigit(String s) {
+        for (int i = 0; i < s.length(); i++) {
+            if (Character.isDigit(s.charAt(i))) return true;
+        }
+        return false;
     }
 
     // ---- date -------------------------------------------------------------

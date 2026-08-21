@@ -105,7 +105,9 @@ public class ImportPreviewActivity extends AppCompatActivity implements RecordAd
 
     private void onImported(ImportManager.Result result, List<String> cats) {
         progress.setVisibility(View.GONE);
-        ocrText.setText(result.ocrText);
+        // OCR 結果を要素別に縦に並べて表示する
+        ocrText.setText(android.text.TextUtils.join("\n",
+                com.micklab.budget.ocr.OcrRecordParser.elements(result.ocrText)));
         adapter.setCategories(cats);
         adapter.setItems(result.records);
         if (result.records.isEmpty()) {

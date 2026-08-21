@@ -42,13 +42,13 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
-            android:text="OCR 結果"
+            android:text="OCR 結果（要素別・縦並び）"
             android:textStyle="bold"
             android:textSize="12sp" />
 
         <ScrollView
             android:layout_width="match_parent"
-            android:layout_height="110dp"
+            android:layout_height="160dp"
             android:layout_marginStart="12dp"
             android:layout_marginEnd="12dp"
             android:background="?attr/colorSurfaceVariant">
