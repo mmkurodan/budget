@@ -21,6 +21,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.WindowManager;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -32,6 +33,7 @@ import com.micklab.budget.llm.ImportManager;
 import com.micklab.budget.ocr.OcrInbox;
 import com.micklab.budget.overlay.FloatingButtonService;
 import com.micklab.budget.ui.ImportPreviewActivity;
+import com.micklab.budget.util.Prefs;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -170,6 +172,7 @@ public class ScreenCaptureService extends Service {
             if (img != null) {
                 try {
                     Bitmap bmp = toBitmap(img);
+                    if (new Prefs(this).excludeSafeArea()) bmp = cropSafeArea(bmp);
                     String text = importManager.recognize(bmp);
                     bmp.recycle();
                     if (oneShot) {
@@ -235,6 +238,44 @@ public class ScreenCaptureService extends Service {
             return cropped;
         }
         return full;
+    }
+
+    // ---- safe area（任意除外）---------------------------------------------
+
+    /** セーフエリア（システムバー等）分を切り落とす。除外量が無ければそのまま返す。 */
+    private Bitmap cropSafeArea(Bitmap bmp) {
+        int[] ins = safeAreaInsets();
+        int left = ins[0], top = ins[1], right = ins[2], bottom = ins[3];
+        if (left == 0 && top == 0 && right == 0 && bottom == 0) return bmp;
+        int w = bmp.getWidth() - left - right;
+        int h = bmp.getHeight() - top - bottom;
+        if (w <= 0 || h <= 0) return bmp;
+        Bitmap cropped = Bitmap.createBitmap(bmp, left, top, w, h);
+        if (cropped != bmp) bmp.recycle();
+        return cropped;
+    }
+
+    /** {left, top, right, bottom}: システムバー＋ディスプレイカットアウト分。取得不能時は上下のバー高さ。 */
+    private int[] safeAreaInsets() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            try {
+                WindowManager wm = (WindowManager) getSystemService(WINDOW_SERVICE);
+                android.view.WindowMetrics m = wm.getCurrentWindowMetrics();
+                android.graphics.Insets in = m.getWindowInsets().getInsets(
+                        android.view.WindowInsets.Type.systemBars()
+                                | android.view.WindowInsets.Type.displayCutout());
+                if (in.top > 0 || in.bottom > 0 || in.left > 0 || in.right > 0) {
+                    return new int[]{in.left, in.top, in.right, in.bottom};
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+        return new int[]{0, dimen("status_bar_height"), 0, dimen("navigation_bar_height")};
+    }
+
+    private int dimen(String name) {
+        int id = getResources().getIdentifier(name, "dimen", "android");
+        return id > 0 ? getResources().getDimensionPixelSize(id) : 0;
     }
 
     // ---- notification -----------------------------------------------------

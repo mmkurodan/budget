@@ -47,9 +47,7 @@ public final class OcrRecordParser {
         StringBuilder item = new StringBuilder();
         boolean skipNextNumber = false;
 
-        for (String raw : text.split("\\s+")) {
-            String tok = raw.trim();
-            if (tok.isEmpty()) continue;
+        for (String tok : elements(text)) {
             String half = toHalfWidth(tok);
 
             // 「残高」を含む要素は無視。数字が付いていなければ直後に来る数字も無視する。
@@ -101,13 +99,17 @@ public final class OcrRecordParser {
         return result;
     }
 
-    /** OCR テキストを要素（空白区切り）に分割する。プレビューの縦並び表示にも使う。 */
+    /**
+     * OCR テキストを要素（空白区切り）に分割する。プレビューの縦並び表示にも使う。
+     * 数字でも文字でも **1 文字だけの要素は無視**（OCR ノイズ除け）。
+     */
     public static List<String> elements(String text) {
         List<String> out = new ArrayList<>();
         if (text == null) return out;
         for (String raw : text.split("\\s+")) {
             String t = raw.trim();
-            if (!t.isEmpty()) out.add(t);
+            if (t.length() <= 1) continue; // 空・1文字は無視
+            out.add(t);
         }
         return out;
     }

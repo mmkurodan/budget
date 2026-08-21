@@ -30,6 +30,7 @@ public class SettingsActivity extends AppCompatActivity {
     private EditText apiKey;
     private EditText ocrLangs;
     private EditText ocrDpi;
+    private android.widget.CheckBox excludeSafeArea;
     private RadioGroup apiType;
 
     @Override
@@ -46,6 +47,7 @@ public class SettingsActivity extends AppCompatActivity {
         apiKey = findViewById(R.id.set_api_key);
         ocrLangs = findViewById(R.id.set_ocr_langs);
         ocrDpi = findViewById(R.id.set_ocr_dpi);
+        excludeSafeArea = findViewById(R.id.set_exclude_safe_area);
         apiType = findViewById(R.id.set_api_type);
 
         baseUrl.setText(prefs.baseUrl());
@@ -53,6 +55,7 @@ public class SettingsActivity extends AppCompatActivity {
         apiKey.setText(prefs.apiKey());
         ocrLangs.setText(prefs.ocrLangs());
         ocrDpi.setText(String.valueOf(prefs.ocrDpi()));
+        excludeSafeArea.setChecked(prefs.excludeSafeArea());
         apiType.check(prefs.isOpenAi() ? R.id.type_openai : R.id.type_ollama);
 
         ((Button) findViewById(R.id.btn_ping)).setOnClickListener(v -> ping());
@@ -77,6 +80,7 @@ public class SettingsActivity extends AppCompatActivity {
         } catch (NumberFormatException e) {
             prefs.setOcrDpi(Prefs.DEFAULT_OCR_DPI);
         }
+        prefs.setExcludeSafeArea(excludeSafeArea.isChecked());
         prefs.setApiType(apiType.getCheckedRadioButtonId() == R.id.type_openai ? "openai" : "ollama");
     }
 

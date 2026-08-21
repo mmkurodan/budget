@@ -15,10 +15,6 @@
         android:title="カテゴリ管理"
         app:showAsAction="never" />
     <item
-        android:id="@+id/menu_float"
-        android:title="フロートボタン ON/OFF"
-        app:showAsAction="never" />
-    <item
         android:id="@+id/menu_settings"
         android:title="設定"
         app:showAsAction="never" />

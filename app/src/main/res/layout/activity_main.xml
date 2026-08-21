@@ -36,6 +36,15 @@
         android:orientation="horizontal">
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fab_float"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:contentDescription="フロートボタン ON/OFF"
+            android:src="@android:drawable/ic_menu_view"
+            app:fabSize="mini" />
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/fab_capture"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

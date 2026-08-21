@@ -17,6 +17,7 @@ public final class Prefs {
     private static final String KEY_API_KEY = "llm_api_key";
     private static final String KEY_OCR_LANGS = "ocr_langs";
     private static final String KEY_OCR_DPI = "ocr_dpi";
+    private static final String KEY_EXCLUDE_SAFE_AREA = "exclude_safe_area";
 
     public static final String DEFAULT_BASE_URL = "http://127.0.0.1:11434";
     public static final String DEFAULT_API_TYPE = "ollama";
@@ -82,5 +83,14 @@ public final class Prefs {
 
     public void setOcrDpi(int v) {
         sp.edit().putInt(KEY_OCR_DPI, v > 0 ? v : DEFAULT_OCR_DPI).apply();
+    }
+
+    /** 取得時にセーフエリア（ステータスバー・ナビゲーションバー等）を除外するか。既定 true。 */
+    public boolean excludeSafeArea() {
+        return sp.getBoolean(KEY_EXCLUDE_SAFE_AREA, true);
+    }
+
+    public void setExcludeSafeArea(boolean v) {
+        sp.edit().putBoolean(KEY_EXCLUDE_SAFE_AREA, v).apply();
     }
 }

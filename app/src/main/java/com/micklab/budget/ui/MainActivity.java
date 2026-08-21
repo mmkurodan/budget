@@ -63,7 +63,11 @@ public class MainActivity extends AppCompatActivity implements RecordAdapter.Cal
         FloatingActionButton fab = findViewById(R.id.fab_add);
         fab.setOnClickListener(v -> addRecord());
 
-        // 追加ボタンの横: 取得対象アプリを個別指定して取り込む（単一アプリ／全画面を選択）
+        // フロートボタン ON/OFF を直接起動
+        FloatingActionButton fabFloat = findViewById(R.id.fab_float);
+        fabFloat.setOnClickListener(v -> toggleFloatingButton());
+
+        // 取得対象アプリを個別指定して取り込む（単一アプリ／全画面を選択）を直接起動
         FloatingActionButton fabCapture = findViewById(R.id.fab_capture);
         fabCapture.setOnClickListener(v -> startAppCapture());
     }
@@ -175,9 +179,6 @@ public class MainActivity extends AppCompatActivity implements RecordAdapter.Cal
             return true;
         } else if (id == R.id.menu_categories) {
             startActivity(new Intent(this, CategoriesActivity.class));
-            return true;
-        } else if (id == R.id.menu_float) {
-            toggleFloatingButton();
             return true;
         } else if (id == R.id.menu_settings) {
             startActivity(new Intent(this, SettingsActivity.class));
