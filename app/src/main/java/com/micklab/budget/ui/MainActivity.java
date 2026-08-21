@@ -195,6 +195,7 @@ public class MainActivity extends AppCompatActivity implements RecordAdapter.Cal
     private void toggleFloatingButton() {
         if (FloatingButtonService.isRunning()) {
             stopService(new Intent(this, FloatingButtonService.class));
+            stopService(new Intent(this, ScreenCaptureService.class)); // 取得セッションも終了
             Toast.makeText(this, "フロートボタンを停止しました", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -211,6 +212,11 @@ public class MainActivity extends AppCompatActivity implements RecordAdapter.Cal
         }
         androidx.core.content.ContextCompat.startForegroundService(
                 this, new Intent(this, FloatingButtonService.class));
-        Toast.makeText(this, "フロートボタンを表示しました", Toast.LENGTH_SHORT).show();
+        // 有効化時に「全画面」の同意を取り、キャプチャセッションを先に確立しておく。
+        // 以降はフロートボタンのタップだけで、アプリ切替や選択ダイアログなしに全画面を取得する。
+        Intent capture = new Intent(this, CaptureActivity.class);
+        capture.putExtra(CaptureActivity.EXTRA_MODE, CaptureActivity.MODE_CONTINUOUS);
+        startActivity(capture);
+        Toast.makeText(this, "フロートボタン表示中。画面の取得を許可してください", Toast.LENGTH_LONG).show();
     }
 }

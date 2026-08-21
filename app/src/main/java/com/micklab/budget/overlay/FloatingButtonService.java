@@ -18,6 +18,7 @@ import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.WindowManager;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
@@ -25,7 +26,6 @@ import androidx.core.app.ServiceCompat;
 import androidx.core.content.ContextCompat;
 
 import com.micklab.budget.R;
-import com.micklab.budget.capture.CaptureActivity;
 import com.micklab.budget.capture.ScreenCaptureService;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -128,17 +128,19 @@ public class FloatingButtonService extends Service {
         buttonView = button;
     }
 
-    /** 初回は同意を挟み、以降は既存セッションへ取得指示を送る。 */
+    /**
+     * 既存セッションへ取得指示を送るだけ（アプリ切替も選択ダイアログも出さない）。
+     * 同意は有効化時に取得済みの前提。未確立なら再有効化を促す。
+     */
     private void onButtonTapped() {
         if (ScreenCaptureService.isProjecting()) {
             Intent i = new Intent(this, ScreenCaptureService.class);
             i.setAction(ScreenCaptureService.ACTION_CAPTURE);
             ContextCompat.startForegroundService(this, i);
         } else {
-            Intent i = new Intent(this, CaptureActivity.class);
-            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            i.putExtra(CaptureActivity.EXTRA_MODE, CaptureActivity.MODE_CONTINUOUS);
-            startActivity(i);
+            Toast.makeText(this,
+                    "画面取得が未許可です。アプリでフロートボタンをオフ→オンして許可してください",
+                    Toast.LENGTH_LONG).show();
         }
     }
 

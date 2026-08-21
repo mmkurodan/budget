@@ -96,7 +96,10 @@ public class ScreenCaptureService extends Service {
             return START_NOT_STICKY;
         }
 
-        // ACTION_START（または null）: セッション未確立なら初期化して1枚取得
+        // ACTION_START（または null）: セッション未確立なら初期化する。
+        // 連続（全画面）はここでは取得しない（フロートボタンのタップ = ACTION_CAPTURE で取得）。
+        // これによりアプリ内で一度だけ同意を取り、以降はアプリ切替も選択ダイアログもなく取得できる。
+        // 単発（対象アプリ個別指定）はこの場で1枚だけ取得する。
         if (projection == null) {
             oneShot = CaptureActivity.MODE_ONESHOT.equals(
                     intent == null ? null : intent.getStringExtra(CaptureActivity.EXTRA_MODE));
@@ -105,7 +108,9 @@ public class ScreenCaptureService extends Service {
                 return START_NOT_STICKY;
             }
         }
-        handler.post(() -> doCapture(0));
+        if (oneShot) {
+            handler.post(() -> doCapture(0));
+        }
         return START_NOT_STICKY;
     }
 
