@@ -71,36 +71,51 @@ public final class OcrRecordParser {
         int year = Calendar.getInstance().get(Calendar.YEAR);
         StringBuilder run = new StringBuilder();
         boolean skipNextNumber = false;
+        boolean lastWasAmount = false; // 直前の要素が有効な金額だったか（符号1文字の反映用）
 
         for (String line : text.split("\\r?\\n")) {
             for (String raw : line.split("\\s+")) {
                 String tok = raw.trim();
-                if (tok.length() <= 1) continue; // 1文字・空は無視
+                if (tok.isEmpty()) continue;
                 String half = toHalfWidth(tok);
+
+                // 有効な数字の直後にある符号1文字（+ / -）は無視せず、直前の金額へ反映する。
+                // 残高の値は既にスキップ済みなので lastWasAmount=false となり対象外。
+                Boolean sign = signOnly(half);
+                if (sign != null && lastWasAmount) {
+                    applyTrailingSign(amounts, sign);
+                    lastWasAmount = false; // 消費（同じ金額に二重適用しない）
+                    continue;
+                }
+                if (tok.length() <= 1) { lastWasAmount = false; continue; } // 1文字・空は無視
 
                 // 「残高」を含む要素は無視。数字が付いていなければ直後の数字も無視。
                 if (tok.contains("残高")) {
                     skipNextNumber = !hasDigit(half);
+                    lastWasAmount = false;
                     continue;
                 }
                 if (skipNextNumber) {
                     skipNextNumber = false;
-                    if (parseAmount(half) != null) continue; // 残高の値を無視
+                    if (parseAmount(half) != null) { lastWasAmount = false; continue; } // 残高の値を無視
                 }
 
                 String date = matchDate(half, year);
                 if (date != null) {
                     dates.add(date);
+                    lastWasAmount = false;
                     continue;
                 }
                 Amount amt = parseAmount(half);
                 if (amt != null) {
-                    if (amt.digits.length() > 7) continue; // 7桁超はスキップ
+                    if (amt.digits.length() > 7) { lastWasAmount = false; continue; } // 7桁超はスキップ
                     long v = Long.parseLong(amt.digits);
                     amounts.add(String.valueOf(amt.negative ? -v : v));
                     flushRun(run, items); // 金額で費目を区切る
+                    lastWasAmount = true;
                     continue;
                 }
+                lastWasAmount = false;
                 if (run.length() > 0) run.append(' ');
                 run.append(tok);
             }
@@ -152,6 +167,30 @@ public final class OcrRecordParser {
             out.add(t);
         }
         return out;
+    }
+
+    /**
+     * トークンが符号1文字だけなら、その符号を返す（true=負, false=正）。符号でなければ null。
+     * 負: - − △ ▲ / 正: +（全角は事前に半角化済み）。
+     */
+    private static Boolean signOnly(String s) {
+        if (s.length() != 1) return null;
+        char c = s.charAt(0);
+        if (c == '-' || c == '−' || c == '△' || c == '▲') return Boolean.TRUE;
+        if (c == '+') return Boolean.FALSE;
+        return null;
+    }
+
+    /** amounts の末尾要素の符号を、直後にあった符号1文字で上書きする。 */
+    private static void applyTrailingSign(List<String> amounts, boolean negative) {
+        if (amounts.isEmpty()) return;
+        int i = amounts.size() - 1;
+        try {
+            long v = Math.abs(Long.parseLong(amounts.get(i)));
+            amounts.set(i, String.valueOf(negative ? -v : v));
+        } catch (NumberFormatException ignore) {
+            // 数値でなければ何もしない
+        }
     }
 
     private static boolean hasDigit(String s) {

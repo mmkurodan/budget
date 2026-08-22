@@ -147,27 +147,37 @@ public class ImportPreviewActivity extends AppCompatActivity {
     // ---- matrix -----------------------------------------------------------
 
     private void rebuild() {
-        populateColumn(colDate, dates, InputType.TYPE_CLASS_TEXT, true);
-        populateColumn(colItem, items, InputType.TYPE_CLASS_TEXT, false);
+        populateColumn(colDate, dates, InputType.TYPE_CLASS_TEXT, true, false);
+        populateColumn(colItem, items, InputType.TYPE_CLASS_TEXT, false, false);
         populateColumn(colAmount, amounts,
-                InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED, false);
+                InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED, false, true);
         updateSaveState();
     }
 
-    private void populateColumn(LinearLayout col, List<String> list, int inputType, boolean isDate) {
+    private void populateColumn(LinearLayout col, List<String> list, int inputType,
+                                boolean isDate, boolean isAmount) {
         col.removeAllViews();
         for (int i = 0; i < list.size(); i++) {
-            addValueCell(col, list, i, inputType, isDate);
+            addValueCell(col, list, i, inputType, isDate, isAmount);
         }
         addAppendCell(col, list);
     }
 
-    private void addValueCell(LinearLayout col, List<String> list, int index, int inputType, boolean isDate) {
+    private void addValueCell(LinearLayout col, List<String> list, int index, int inputType,
+                              boolean isDate, boolean isAmount) {
         View cell = getLayoutInflater().inflate(R.layout.cell_matrix, col, false);
         EditText edit = cell.findViewById(R.id.cell_edit);
         View menu = cell.findViewById(R.id.cell_menu);
+        View sign = cell.findViewById(R.id.cell_sign);
         edit.setInputType(inputType);
         edit.setText(list.get(index));
+        if (isAmount) {
+            sign.setVisibility(View.VISIBLE);
+            sign.setOnClickListener(v -> {   // ワンタップで金額の +/- を反転
+                long v0 = RecordAdapter.parseAmount(edit.getText().toString());
+                edit.setText(String.valueOf(-v0));
+            });
+        }
         edit.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int a, int b, int c) {
