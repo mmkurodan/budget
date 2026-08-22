@@ -45,14 +45,30 @@ public final class OcrRecordParser {
      * レコードを作り、日付は同 index（無ければ直近＝カウントが少ない側は最後の日付を流用）、
      * 費目も同 index を割り当てる。日付が1つも無ければ空を返す。
      */
-    public static List<Record> parse(String text) {
-        List<Record> out = new ArrayList<>();
-        if (text == null) return out;
-        int year = Calendar.getInstance().get(Calendar.YEAR);
+    /** 3列（日付・費目・金額）の候補。金額は符号付き整数の文字列（編集用）。長さは不揃いのことがある。 */
+    public static class Columns {
+        public final List<String> dates;
+        public final List<String> items;
+        public final List<String> amounts;
 
+        public Columns(List<String> dates, List<String> items, List<String> amounts) {
+            this.dates = dates;
+            this.items = items;
+            this.amounts = amounts;
+        }
+    }
+
+    /**
+     * OCR の読み取り順を保ったまま、日付・費目・金額をそれぞれ登場順に集めて3列で返す。
+     * 費目の区切りは 金額 と 行末。除外ルール（残高＋直後の数字／7桁超／1文字）を適用する。
+     * <p>各列の長さは不揃いのことがあり、マトリクス編集で揃えてから登録する。
+     */
+    public static Columns parseColumns(String text) {
         List<String> dates = new ArrayList<>();
-        List<Long> amounts = new ArrayList<>();
+        List<String> amounts = new ArrayList<>();
         List<String> items = new ArrayList<>();
+        if (text == null) return new Columns(dates, items, amounts);
+        int year = Calendar.getInstance().get(Calendar.YEAR);
         StringBuilder run = new StringBuilder();
         boolean skipNextNumber = false;
 
@@ -81,7 +97,7 @@ public final class OcrRecordParser {
                 if (amt != null) {
                     if (amt.digits.length() > 7) continue; // 7桁超はスキップ
                     long v = Long.parseLong(amt.digits);
-                    amounts.add(amt.negative ? -v : v);
+                    amounts.add(String.valueOf(amt.negative ? -v : v));
                     flushRun(run, items); // 金額で費目を区切る
                     continue;
                 }
@@ -90,15 +106,27 @@ public final class OcrRecordParser {
             }
             flushRun(run, items); // 行末で費目を区切る
         }
+        return new Columns(dates, items, amounts);
+    }
 
-        if (dates.isEmpty()) return out; // 日付が全く無ければレコード無し
-
-        for (int k = 0; k < amounts.size(); k++) {
+    /**
+     * 3列を同 index で1レコードに組み立てる（金額の数だけ。日付が足りなければ直近を流用）。
+     * 日付が1つも無ければ空を返す。
+     */
+    public static List<Record> parse(String text) {
+        Columns c = parseColumns(text);
+        List<Record> out = new ArrayList<>();
+        if (c.dates.isEmpty()) return out;
+        for (int k = 0; k < c.amounts.size(); k++) {
             Record r = new Record();
-            r.date = dates.get(Math.min(k, dates.size() - 1)); // 足りなければ直近の日付を流用
+            r.date = c.dates.get(Math.min(k, c.dates.size() - 1));
             r.category = "";
-            r.item = k < items.size() ? items.get(k) : "";
-            r.amount = amounts.get(k);
+            r.item = k < c.items.size() ? c.items.get(k) : "";
+            try {
+                r.amount = Long.parseLong(c.amounts.get(k));
+            } catch (NumberFormatException e) {
+                r.amount = 0;
+            }
             out.add(r);
         }
         return out;

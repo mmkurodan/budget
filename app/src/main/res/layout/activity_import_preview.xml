@@ -35,20 +35,20 @@
             android:id="@+id/status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="12dp"
+            android:padding="10dp"
             android:textSize="13sp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
-            android:text="OCR 結果（要素別・縦並び）"
-            android:textStyle="bold"
-            android:textSize="12sp" />
+            android:text="OCR 結果（要素別）"
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
         <ScrollView
             android:layout_width="match_parent"
-            android:layout_height="160dp"
+            android:layout_height="96dp"
             android:layout_marginStart="12dp"
             android:layout_marginEnd="12dp"
             android:background="?attr/colorSurfaceVariant">
@@ -57,27 +57,85 @@
                 android:id="@+id/ocr_text"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="8dp"
-                android:textSize="11sp"
                 android:fontFamily="monospace"
-                android:textIsSelectable="true" />
+                android:padding="8dp"
+                android:textIsSelectable="true"
+                android:textSize="11sp" />
         </ScrollView>
 
-        <TextView
-            android:layout_width="wrap_content"
+        <!-- 候補マトリクス見出し -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
             android:layout_marginTop="8dp"
-            android:text="候補（編集可）"
-            android:textStyle="bold"
-            android:textSize="12sp" />
+            android:background="?attr/colorSurfaceVariant"
+            android:baselineAligned="false"
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp">
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recycler"
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.1"
+                android:text="日付"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.4"
+                android:text="費目"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1.0"
+                android:text="金額"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <ScrollView
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
-            android:scrollbars="vertical" />
+            android:layout_weight="1">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:baselineAligned="false"
+                android:orientation="horizontal"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp">
+
+                <LinearLayout
+                    android:id="@+id/col_date"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1.1"
+                    android:orientation="vertical" />
+
+                <LinearLayout
+                    android:id="@+id/col_item"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1.4"
+                    android:orientation="vertical" />
+
+                <LinearLayout
+                    android:id="@+id/col_amount"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1.0"
+                    android:orientation="vertical" />
+            </LinearLayout>
+        </ScrollView>
 
         <LinearLayout
             android:layout_width="match_parent"
