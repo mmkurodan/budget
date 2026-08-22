@@ -37,66 +37,78 @@ public final class OcrRecordParser {
     private static final Pattern DATE_JP_MD = Pattern.compile("^(\\d{1,2})月(\\d{1,2})日?$");
     private static final Pattern DIGITS = Pattern.compile("\\d+");
 
+    /**
+     * OCR の読み取り順を保ったまま、日付・費目・金額をそれぞれ登場順に集め、
+     * 同じ順番同士（index）で1レコードに組み立てる。行/列どちらのレイアウトでも
+     * 「文字が1つの費目に全結合」されないようにする。
+     * <p>費目の区切りは 金額 と 行末。日付・金額はそれぞれ現れた順に並べる。金額の数だけ
+     * レコードを作り、日付は同 index（無ければ直近＝カウントが少ない側は最後の日付を流用）、
+     * 費目も同 index を割り当てる。日付が1つも無ければ空を返す。
+     */
     public static List<Record> parse(String text) {
         List<Record> out = new ArrayList<>();
         if (text == null) return out;
         int year = Calendar.getInstance().get(Calendar.YEAR);
 
-        String currentDate = null;   // 直近の日付（以降へ引き継ぐ）
-        String firstDate = null;     // 最初に現れた日付（日付前レコードの補完に使う）
-        StringBuilder item = new StringBuilder();
+        List<String> dates = new ArrayList<>();
+        List<Long> amounts = new ArrayList<>();
+        List<String> items = new ArrayList<>();
+        StringBuilder run = new StringBuilder();
         boolean skipNextNumber = false;
 
-        for (String tok : elements(text)) {
-            String half = toHalfWidth(tok);
+        for (String line : text.split("\\r?\\n")) {
+            for (String raw : line.split("\\s+")) {
+                String tok = raw.trim();
+                if (tok.length() <= 1) continue; // 1文字・空は無視
+                String half = toHalfWidth(tok);
 
-            // 「残高」を含む要素は無視。数字が付いていなければ直後に来る数字も無視する。
-            if (tok.contains("残高")) {
-                skipNextNumber = !hasDigit(half);
-                continue;
-            }
-            if (skipNextNumber) {
-                skipNextNumber = false;
-                if (parseAmount(half) != null) continue; // 残高の値を無視
-                // 数字でなければ通常処理へフォールスルー
-            }
-
-            String date = matchDate(half, year);
-            if (date != null) {
-                currentDate = date;
-                if (firstDate == null) {
-                    firstDate = date;
-                    for (Record r : out) {          // 日付前に積んだレコードを最初の日付で補完
-                        if (r.date == null) r.date = date;
-                    }
+                // 「残高」を含む要素は無視。数字が付いていなければ直後の数字も無視。
+                if (tok.contains("残高")) {
+                    skipNextNumber = !hasDigit(half);
+                    continue;
                 }
-                continue;
-            }
+                if (skipNextNumber) {
+                    skipNextNumber = false;
+                    if (parseAmount(half) != null) continue; // 残高の値を無視
+                }
 
-            Amount amt = parseAmount(half);
-            if (amt != null) {
-                if (amt.digits.length() > 7) continue; // 7 桁超はスキップ
-                long v = Long.parseLong(amt.digits);
-                Record r = new Record();
-                r.date = currentDate;                // 日付未確定なら null（後で補完）
-                r.category = "";
-                r.item = item.toString().trim();
-                r.amount = amt.negative ? -v : v;
-                out.add(r);
-                item.setLength(0);
-                continue;
+                String date = matchDate(half, year);
+                if (date != null) {
+                    dates.add(date);
+                    continue;
+                }
+                Amount amt = parseAmount(half);
+                if (amt != null) {
+                    if (amt.digits.length() > 7) continue; // 7桁超はスキップ
+                    long v = Long.parseLong(amt.digits);
+                    amounts.add(amt.negative ? -v : v);
+                    flushRun(run, items); // 金額で費目を区切る
+                    continue;
+                }
+                if (run.length() > 0) run.append(' ');
+                run.append(tok);
             }
-
-            if (item.length() > 0) item.append(' ');
-            item.append(tok); // 費目は元の表記のまま
+            flushRun(run, items); // 行末で費目を区切る
         }
 
-        // 日付が最後まで現れなかったレコード（全体に日付が無い）は除外する。
-        List<Record> result = new ArrayList<>();
-        for (Record r : out) {
-            if (r.date != null) result.add(r);
+        if (dates.isEmpty()) return out; // 日付が全く無ければレコード無し
+
+        for (int k = 0; k < amounts.size(); k++) {
+            Record r = new Record();
+            r.date = dates.get(Math.min(k, dates.size() - 1)); // 足りなければ直近の日付を流用
+            r.category = "";
+            r.item = k < items.size() ? items.get(k) : "";
+            r.amount = amounts.get(k);
+            out.add(r);
         }
-        return result;
+        return out;
+    }
+
+    private static void flushRun(StringBuilder run, List<String> items) {
+        if (run.length() > 0) {
+            items.add(run.toString().trim());
+            run.setLength(0);
+        }
     }
 
     /**
